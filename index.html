@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="/head.min.js"></script>
+    <script type="text/javascript">
+      head.js("/coquette.js",
+              "/game.js",
+              function() {
+                game = new Game('screen', 500, 500);
+              });
+    </script>
+  </head>
+  <body><canvas id="screen"></canvas></body>
+</html>
