@@ -1,7 +1,7 @@
 ;(function(exports) {
   var TRACK_COLOR = "#fff";
   var WALL_COLOR = "#000";
-  var CAR_COLOR = "#000";
+  var WHEEL_COLOR = "#000";
   var BACKGROUND_COLOR = "#fff";
 
   function Game() {
@@ -15,13 +15,15 @@
     this.c.entities.create(Car, {
       center: { x: start.x, y: start.y },
       keys: { left: this.c.inputter.F, right: this.c.inputter.G,
-              forward: this.c.inputter.J, backward: this.c.inputter.K }
+              forward: this.c.inputter.J, backward: this.c.inputter.K },
+      color: "#f00"
     });
 
     this.c.entities.create(Car, {
       center: { x: start.x + 20, y: start.y },
       keys: { left: this.c.inputter.LEFT_ARROW, right: this.c.inputter.RIGHT_ARROW,
-              forward: this.c.inputter.UP_ARROW, backward: this.c.inputter.DOWN_ARROW }
+              forward: this.c.inputter.UP_ARROW, backward: this.c.inputter.DOWN_ARROW },
+      color: "#33f"
     });
 
     // track
@@ -143,7 +145,7 @@
 
   function FrontWheel(game, options) {
     this.game = game;
-    this.zindex = 1;
+    this.zindex = 2;
     this.car = options.car;
     this.center = options.center;
     this.size = { x: 4, y: 8 };
@@ -181,7 +183,7 @@
     },
 
     draw: function(ctx) {
-      util.fillRect(ctx, this, CAR_COLOR);
+      util.fillRect(ctx, this, WHEEL_COLOR);
     },
 
     collision: function(other) {
@@ -191,7 +193,7 @@
 
   function BackWheel(game, options) {
     this.game = game;
-    this.zindex = 1;
+    this.zindex = 2;
     this.car = options.car;
     this.center = options.center;
     this.size = { x: 4, y: 8 };
@@ -200,7 +202,7 @@
 
   BackWheel.prototype = {
     draw: function(ctx) {
-      util.fillRect(ctx, this, CAR_COLOR);
+      util.fillRect(ctx, this, WHEEL_COLOR);
     },
 
     collision: function(other) {
@@ -213,6 +215,7 @@
     this.zindex = 1;
     this.center = options.center;
     this.keys = options.keys;
+    this.color = options.color;
     this.size = { x: 10, y: 24 };
     this.angle = 0;
     this.velocity = { x: 0, y: 0 };
@@ -298,7 +301,7 @@
         }, this);
       }
 
-      util.fillRect(ctx, this, CAR_COLOR);
+      util.fillRect(ctx, this, this.color);
     },
 
     collision: function(other) {
