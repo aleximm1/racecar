@@ -3,6 +3,7 @@
   var WALL_COLOR = "#000";
   var WHEEL_COLOR = "#000";
   var BACKGROUND_COLOR = "#fff";
+  var TEXT_COLOR = "#000";
 
   function Game() {
     this.size = { x: 1000, y: 500 };
@@ -12,36 +13,19 @@
 
     // cars
 
-    this.c.entities.create(Car, {
-      center: { x: start.x, y: start.y },
-      keys: { left: this.c.inputter.F, right: this.c.inputter.G,
-              forward: this.c.inputter.J, backward: this.c.inputter.K },
-      color: "#f00"
-    });
-
-    this.c.entities.create(Car, {
+    this.car = this.c.entities.create(Car, {
       center: { x: start.x + 20, y: start.y },
       keys: { left: this.c.inputter.LEFT_ARROW, right: this.c.inputter.RIGHT_ARROW,
               forward: this.c.inputter.UP_ARROW, backward: this.c.inputter.DOWN_ARROW },
       color: "#33f"
     });
 
-    // track
+    // checkpoints
 
-    this.c.entities.create(RectangleTrackPiece, { // top
-      center: { x: 500, y: 50 }, size: { x: 1000, y: 100 }
-    });
-
-    this.c.entities.create(RectangleTrackPiece, { // right
-      center: { x: 950, y: 250 }, size: { x: 100, y: 500 }
-    });
-
-    this.c.entities.create(RectangleTrackPiece, { // bottom
-      center: { x: 500, y: 450 }, size: { x: 1000, y: 100 }
-    });
-
-    this.c.entities.create(RectangleTrackPiece, { // left
-      center: { x: 50, y: 250 }, size: { x: 100, y: 500 }
+    this.c.entities.create(Checkpoint, {
+      center: { x: 950, y: 240 },
+      size: { x: 10, y: 100 },
+      angle: 90
     });
 
     // walls
@@ -54,14 +38,6 @@
       center: { x: 500, y: 100 }, size: { x: 10, y: 800 }, angle: 90
     });
 
-    // this.c.entities.create(Wall, { // top right outer
-    //   center: { x: 950, y: 50 }, size: { x: 10, y: 200 }, angle: 135
-    // });
-
-    // this.c.entities.create(Wall, { // top right inner
-    //   center: { x: 850, y: 150 }, size: { x: 10, y: 146 }, angle: 135
-    // });
-
     this.c.entities.create(Wall, { // right inner
       center: { x: 900, y: 250 }, size: { x: 10, y: 300 }, angle: 180
     });
@@ -70,45 +46,85 @@
       center: { x: 995, y: 250 }, size: { x: 10, y: 500 }, angle: 180
     });
 
-    // this.c.entities.create(Wall, { // bottom right outer
-    //   center: { x: 950, y: 450 }, size: { x: 10, y: 146 }, angle: 225
-    // });
-
-    // this.c.entities.create(Wall, { // bottom right inner
-    //   center: { x: 850, y: 350 }, size: { x: 10, y: 146 }, angle: 225
-    // });
-
     this.c.entities.create(Wall, { // bottom inner
       center: { x: 500, y: 400 }, size: { x: 10, y: 800 }, angle: 270
     });
 
     this.c.entities.create(Wall, { // bottom outer
-      center: { x: 500, y: 495 }, size: { x: 10, y: 1000 }, angle: 90
+      center: { x: 500, y: 495 }, size: { x: 10, y: 1000 }, angle: 270
     });
 
-    // this.c.entities.create(Wall, { // bottom left outer
-    //   center: { x: 50, y: 450 }, size: { x: 10, y: 146 }, angle: 315
-    // });
-
-    // this.c.entities.create(Wall, { // bottom left inner
-    //   center: { x: 150, y: 350 }, size: { x: 10, y: 146 }, angle: 315
-    // });
-
     this.c.entities.create(Wall, { // left outer
-      center: { x: 5, y: 250 }, size: { x: 10, y: 500 }, angle: 180
+      center: { x: 5, y: 250 }, size: { x: 10, y: 500 }, angle: 0
     });
 
     this.c.entities.create(Wall, { // left inner
-      center: { x: 100, y: 250 }, size: { x: 10, y: 300 }, angle: 180
+      center: { x: 100, y: 250 }, size: { x: 10, y: 300 }, angle: 0
     });
+  };
 
-    // this.c.entities.create(Wall, { // top left outer
-    //   center: { x: 50, y: 50 }, size: { x: 10, y: 146 }, angle: 45
-    // });
+  Game.prototype = {
+    draw: function(ctx) {
 
-    // this.c.entities.create(Wall, { // top left inner
-    //   center: { x: 150, y: 150 }, size: { x: 10, y: 146 }, angle: 45
-    // });
+      ctx.font = "20px Courier";
+      ctx.fillStyle = this.car.color;
+      ctx.fillText(this.car.lapsLeft() + " laps left",
+                   this.size.x / 2,
+                   this.size.y / 2);
+
+    }
+  };
+
+  function Checkpoint(game, options) {
+    this.game = game;
+    this.center = options.center;
+    this.size = options.size;
+    this.angle = options.angle;
+    this.color = "#000";
+  };
+
+  Checkpoint.prototype = {
+    update: function() {
+
+    },
+
+    draw: function(ctx) {
+      ctx.restore(); // doing own rotation of drawing so stop framework doing it
+      var endPoints = util.objToLinePoints(this);
+      ctx.strokeStyle = this.color;
+      ctx.beginPath();
+      ctx.moveTo(endPoints[0].x, endPoints[0].y);
+      ctx.lineTo(endPoints[1].x, endPoints[1].y);
+      ctx.stroke();
+      ctx.closePath();
+    },
+
+    isHorizontal: function() {
+      return this.angle === 90;
+    },
+
+    collision: function(other) {
+      if (other instanceof Car) {
+        var car = other;
+        if (this.isHorizontal()) {
+          var latestPass = car.passes[car.passes.length - 1];
+          if (car.center.y > this.center.y &&
+              (latestPass === undefined ||
+               (latestPass.checkpoint === this && latestPass.passed === true))) {
+            console.log("push")
+            car.passes.push({ checkpoint: this, passed: false });
+          } else if (latestPass !== undefined &&
+                     car.center.y < this.center.y &&
+                     latestPass.checkpoint === this &&
+                     latestPass.passed === false) {
+            console.log("passed")
+            latestPass.passed = true;
+          }
+        } else {
+          throw "vertical checkpoints not supported";
+        }
+      }
+    }
   };
 
   function Wall(game, options) {
@@ -126,20 +142,6 @@
   Wall.prototype = {
     draw: function(ctx) {
       util.fillRect(ctx, this, WALL_COLOR);
-    }
-  };
-
-  function RectangleTrackPiece(game, options) {
-    this.game = game;
-    this.zindex = -1;
-    this.center = options.center;
-    this.size = options.size;
-    this.angle = 0;
-  };
-
-  RectangleTrackPiece.prototype = {
-    draw: function(ctx) {
-      util.fillRect(ctx, this, TRACK_COLOR);
     }
   };
 
@@ -219,6 +221,7 @@
     this.size = { x: 10, y: 24 };
     this.angle = 0;
     this.velocity = { x: 0, y: 0 };
+    this.passes = [];
 
     this.drawables = [];
 
@@ -287,6 +290,10 @@
       return [this.frontLeft, this.frontRight, this.backLeft, this.backRight];
     },
 
+    lapsLeft: function() {
+      return 3 - this.passes.filter(function(p) { return p.passed === true; }).length;
+    },
+
     move: function() {
       this.wheels().concat(this).forEach(function(o) {
         o.center.x += this.velocity.x;
@@ -314,11 +321,6 @@
 
         var bounceRatio = 0.4;
         var otherNormal = util.bounceLineNormal(car, other);
-        var dot = util.dotProduct(car.velocity, otherNormal);
-        car.velocity.x -= 2 * dot * otherNormal.x;
-        car.velocity.y -= 2 * dot * otherNormal.y;
-
-        car.velocity = util.multiply(car.velocity, { x: bounceRatio, y: bounceRatio });
 
         // this.game.c.entities.create(Line, {
         //   startPoint: util.cp(car.center),
@@ -332,15 +334,41 @@
         //   color: "#f00"
         // });
 
+        function carInWall(car) {
+          return [car].concat(car.wheels())
+            .filter(function(p) {
+              return this.game.c.collider.isIntersecting(p, other)
+            }).length > 0
+        };
+
+        // get out of wall
+
+        var oldVelocity = this.velocity;
+        car.velocity = util.unitVector(otherNormal);
         var i = 0;
-        var carPieces = [car].concat(car.wheels());
-        while (carPieces
-               .filter(function(p) {
-                 return this.game.c.collider.isIntersecting(p, other) }).length > 0) {
+        while(carInWall(car)) {
           i++;
           car.move();
           if (i > 100) {
-            car.move(); car.move();
+            break;
+          }
+        }
+
+        car.velocity = oldVelocity;
+
+        // bounce off wall
+
+        var dot = util.dotProduct(car.velocity, otherNormal);
+        car.velocity.x -= 2 * dot * otherNormal.x;
+        car.velocity.y -= 2 * dot * otherNormal.y;
+
+        car.velocity = util.multiply(car.velocity, { x: bounceRatio, y: bounceRatio });
+
+        var i = 0;
+        while (carInWall(car)) {
+          i++;
+          car.move();
+          if (i > 100) {
             break;
           }
         }
@@ -390,6 +418,17 @@
     angleToVector: function(angle) {
       var r = angle * 0.01745;
       return this.unitVector({ x: Math.sin(r), y: -Math.cos(r) });
+    },
+
+    objToLinePoints: function(obj) {
+      return [
+        util.rotate({ x: obj.center.x, y: obj.center.y + obj.size.y / 2 },
+                    obj.center,
+                    obj.angle),
+        util.rotate({ x: obj.center.x, y: obj.center.y - obj.size.y / 2 },
+                    obj.center,
+                    obj.angle)
+      ]
     },
 
     vectorToAngle: function(v) {
@@ -449,20 +488,29 @@
             util.pointOnLineClosestToObj(obj, line),
             obj.center);
 
+      // game.c.entities.create(Rectangle, {
+      //   center: util.pointOnLineClosestToObj(obj, line),
+      //   size: { x: 5, y: 5 },
+      //   color: "#000"
+      // });
+
       // Make the normal a unit vector and return it.
       return util.unitVector(objToClosestPointOnLineVector);
     },
 
     pointOnLineClosestToObj: function(obj, line) {
-      var lineEndPoint1 = util.rotate({ x: line.center.x, y: line.center.y + line.size.y / 2 },
-                                      line.center,
-                                      line.angle);
-      var lineEndPoint2 = util.rotate({ x: line.center.x, y: line.center.y - line.size.y / 2 },
-                                      line.center,
-                                      line.angle);
+      var endPoints = util.objToLinePoints(line);
+      var lineEndPoint1 = endPoints[0]
+      var lineEndPoint2 = endPoints[1];
 
       // game.c.entities.create(Rectangle, {
       //   center: lineEndPoint1,
+      //   size: { x: 5, y: 5 },
+      //   color: "#f00"
+      // });
+
+      // game.c.entities.create(Rectangle, {
+      //   center: lineEndPoint2,
       //   size: { x: 5, y: 5 },
       //   color: "#f00"
       // });
