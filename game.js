@@ -49,8 +49,16 @@
     });
 
     this.c.entities.create(Wall, { // top inner
-      center: { x: 500, y: 100 }, size: { x: 10, y: 810 }, angle: 90
+      center: { x: 500, y: 100 }, size: { x: 10, y: 800 }, angle: 90
     });
+
+    // this.c.entities.create(Wall, { // top right outer
+    //   center: { x: 950, y: 50 }, size: { x: 10, y: 200 }, angle: 135
+    // });
+
+    // this.c.entities.create(Wall, { // top right inner
+    //   center: { x: 850, y: 150 }, size: { x: 10, y: 146 }, angle: 135
+    // });
 
     this.c.entities.create(Wall, { // right inner
       center: { x: 900, y: 250 }, size: { x: 10, y: 300 }, angle: 180
@@ -60,21 +68,45 @@
       center: { x: 995, y: 250 }, size: { x: 10, y: 500 }, angle: 180
     });
 
+    // this.c.entities.create(Wall, { // bottom right outer
+    //   center: { x: 950, y: 450 }, size: { x: 10, y: 146 }, angle: 225
+    // });
+
+    // this.c.entities.create(Wall, { // bottom right inner
+    //   center: { x: 850, y: 350 }, size: { x: 10, y: 146 }, angle: 225
+    // });
+
     this.c.entities.create(Wall, { // bottom inner
-      center: { x: 500, y: 495 }, size: { x: 10, y: 1000 }, angle: 90
+      center: { x: 500, y: 400 }, size: { x: 10, y: 800 }, angle: 270
     });
 
     this.c.entities.create(Wall, { // bottom outer
-      center: { x: 500, y: 400 }, size: { x: 10, y: 810 }, angle: 270
+      center: { x: 500, y: 495 }, size: { x: 10, y: 1000 }, angle: 90
     });
+
+    // this.c.entities.create(Wall, { // bottom left outer
+    //   center: { x: 50, y: 450 }, size: { x: 10, y: 146 }, angle: 315
+    // });
+
+    // this.c.entities.create(Wall, { // bottom left inner
+    //   center: { x: 150, y: 350 }, size: { x: 10, y: 146 }, angle: 315
+    // });
 
     this.c.entities.create(Wall, { // left outer
       center: { x: 5, y: 250 }, size: { x: 10, y: 500 }, angle: 180
     });
 
     this.c.entities.create(Wall, { // left inner
-      center: { x: 95, y: 250 }, size: { x: 10, y: 310 }, angle: 180
+      center: { x: 100, y: 250 }, size: { x: 10, y: 300 }, angle: 180
     });
+
+    // this.c.entities.create(Wall, { // top left outer
+    //   center: { x: 50, y: 50 }, size: { x: 10, y: 146 }, angle: 45
+    // });
+
+    // this.c.entities.create(Wall, { // top left inner
+    //   center: { x: 150, y: 150 }, size: { x: 10, y: 146 }, angle: 45
+    // });
   };
 
   function Wall(game, options) {
@@ -277,7 +309,7 @@
       if (other instanceof Wall) {
         var car = carPiece.car || carPiece;
 
-        var bounceRatio = 0.3;
+        var bounceRatio = 0.4;
         var otherNormal = util.bounceLineNormal(car, other);
         var dot = util.dotProduct(car.velocity, otherNormal);
         car.velocity.x -= 2 * dot * otherNormal.x;
@@ -285,11 +317,27 @@
 
         car.velocity = util.multiply(car.velocity, { x: bounceRatio, y: bounceRatio });
 
+        // this.game.c.entities.create(Line, {
+        //   startPoint: util.cp(car.center),
+        //   endPoint: util.add(car.center, util.multiply(otherNormal, { x: 100, y: 100 })),
+        //   color: "#000"
+        // });
+
+        // this.game.c.entities.create(Line, {
+        //   startPoint: util.cp(car.center),
+        //   endPoint: util.add(car.center, util.multiply(car.velocity, { x: 100, y: 100 })),
+        //   color: "#f00"
+        // });
+
         var i = 0;
-        while (this.game.c.collider.isIntersecting(carPiece, other)) {
+        var carPieces = [car].concat(car.wheels());
+        while (carPieces
+               .filter(function(p) {
+                 return this.game.c.collider.isIntersecting(p, other) }).length > 0) {
           i++;
           car.move();
           if (i > 100) {
+            car.move(); car.move();
             break;
           }
         }
@@ -409,6 +457,12 @@
       var lineEndPoint2 = util.rotate({ x: line.center.x, y: line.center.y - line.size.y / 2 },
                                       line.center,
                                       line.angle);
+
+      // game.c.entities.create(Rectangle, {
+      //   center: lineEndPoint1,
+      //   size: { x: 5, y: 5 },
+      //   color: "#f00"
+      // });
 
       var lineUnitVector = util.unitVector(util.angleToVector(line.angle));
       var lineEndToObjVector = util.vectorBetween(lineEndPoint1, obj.center);
