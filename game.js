@@ -94,7 +94,7 @@
           }
         }
       } else if (this.state === "racing") {
-        if (this.car.lapsToGo() === 3) {
+        if (this.car.lapsToGo() === 0) {
           var time = new Date().getTime() - this.started;
           if (this.best === undefined || time < this.best) {
             this.best = time;
@@ -123,7 +123,7 @@
       });
 
       this.car = this.c.entities.create(Car, {
-        center: { x: this.size.x * 0.95, y: this.size.y / 2 },
+        center: { x: this.size.x * 0.95, y: this.size.y / 2 - 15 },
         keys: { left: this.c.inputter.LEFT_ARROW, right: this.c.inputter.RIGHT_ARROW,
                 forward: this.c.inputter.UP_ARROW, backward: this.c.inputter.DOWN_ARROW },
         color: "#33f"
@@ -155,8 +155,7 @@
 
       // best
 
-      ctx.fillText("BEST " + formatTime(this.best),
-                   160, 277);
+      ctx.fillText("BEST " + formatTime(this.best), 155, 268);
 
       // this
 
@@ -166,10 +165,10 @@
       } else {
         thisTimeStr += formatTime();
       }
-      ctx.fillText(thisTimeStr, 160, 307);
+      ctx.fillText(thisTimeStr, 155, 294);
 
-      ctx.fillText("LAPS " + this.car.lapsToGo(),
-                   160, 337);
+      ctx.fillText("LAPS " + this.car.lapsToGo(), 155, 320);
+      ctx.fillText("R TO RESTART", 155, 344)
     }
   };
 
