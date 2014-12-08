@@ -384,7 +384,7 @@
         var orientationAngle = util.vectorToAngle(util.angleToVector(this.angle));
 
         var rotateAngleDelta = rotateProportion * 360 *
-            (Math.abs(velocityAngle - orientationAngle) < 90 ? 1 : -1);
+            (Math.min(velocityAngle - orientationAngle, orientationAngle - velocityAngle) < 90 ? 1 : -1);
         this.velocity = util.rotate(this.velocity, { x: 0, y: 0 }, rotateAngleDelta);
 
         this.wheels().concat(this).forEach(function(o) { o.angle += rotateAngleDelta; });
