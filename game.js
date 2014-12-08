@@ -155,7 +155,7 @@
 
       // best
 
-      ctx.fillText("BEST " + formatTime(this.best), 149, 268);
+      ctx.fillText("BEST " + formatTime(this.best), 160, 277);
 
       // this
 
@@ -165,10 +165,9 @@
       } else {
         thisTimeStr += formatTime();
       }
-      ctx.fillText(thisTimeStr, 149, 294);
+      ctx.fillText(thisTimeStr, 160, 307);
 
-      ctx.fillText("LAPS " + this.car.lapsToGo(), 149, 320);
-      ctx.fillText("R TO RESTART", 149, 344)
+      ctx.fillText("LAPS " + this.car.lapsToGo(), 160, 337);
     }
   };
 
@@ -696,7 +695,7 @@
     if (millis !== undefined) {
       return (millis / 1000).toString();
     } else {
-      return "---";
+      return "";
     }
   };
 
