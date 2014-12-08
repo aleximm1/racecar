@@ -155,7 +155,7 @@
 
       // best
 
-      ctx.fillText("BEST " + formatTime(this.best), 155, 268);
+      ctx.fillText("BEST " + formatTime(this.best), 149, 268);
 
       // this
 
@@ -165,10 +165,10 @@
       } else {
         thisTimeStr += formatTime();
       }
-      ctx.fillText(thisTimeStr, 155, 294);
+      ctx.fillText(thisTimeStr, 149, 294);
 
-      ctx.fillText("LAPS " + this.car.lapsToGo(), 155, 320);
-      ctx.fillText("R TO RESTART", 155, 344)
+      ctx.fillText("LAPS " + this.car.lapsToGo(), 149, 320);
+      ctx.fillText("R TO RESTART", 149, 344)
     }
   };
 
@@ -193,14 +193,16 @@
     },
 
     draw: function(ctx) {
-      ctx.restore(); // doing own rotation of drawing so stop framework doing it
-      var endPoints = util.objToLinePoints(this);
-      ctx.strokeStyle = this.color;
-      ctx.beginPath();
-      ctx.moveTo(endPoints[0].x, endPoints[0].y);
-      ctx.lineTo(endPoints[1].x, endPoints[1].y);
-      ctx.stroke();
-      ctx.closePath();
+      if (this.label === "bridge") {
+        ctx.restore(); // doing own rotation of drawing so stop framework doing it
+        var endPoints = util.objToLinePoints(this);
+        ctx.strokeStyle = this.color;
+        ctx.beginPath();
+        ctx.moveTo(endPoints[0].x, endPoints[0].y);
+        ctx.lineTo(endPoints[1].x, endPoints[1].y);
+        ctx.stroke();
+        ctx.closePath();
+      }
     },
 
     isHorizontal: function() {
