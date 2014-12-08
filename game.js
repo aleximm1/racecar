@@ -25,54 +25,83 @@
     this.c.entities.create(Checkpoint, {
       center: { x: 950, y: 240 },
       size: { x: 10, y: 100 },
-      angle: 90
+      angle: 90,
+      label: "bridge"
+    });
+
+    this.c.entities.create(Checkpoint, {
+      center: { x: 55, y: 300 },
+      size: { x: 10, y: 100 },
+      angle: 90,
+      label: "tunnel"
     });
 
     // walls
 
-    this.c.entities.create(Wall, { // top outer
-      center: { x: 500, y: 5 }, size: { x: 10, y: 1000 }, angle: 90
+    makeWall(this, { x: 900, y: 200 }, { x: 10, y: 210 }, 180); // right inner
+    makeWall(this, { x: 995, y: 200 }, { x: 10, y: 400 }, 180); // right outer
+
+    makeWall(this, { x: 700, y: 5 }, { x: 10, y: 600 }, 90); // top outer
+    makeWall(this, { x: 700, y: 100 }, { x: 10, y: 410 }, 90) // top inner
+
+    makeWall(this, { x: 400, y: 50 }, { x: 10, y: 100 }, 0); // third straight top
+
+    makeWall(this, { x: 400, y: 300 }, { x: 10, y: 200 }, 0); // third straight left
+    makeWall(this, { x: 500, y: 350 }, { x: 10, y: 310 }, 0); // third straight right
+
+    makeWall(this, { x: 250, y: 400 }, { x: 10, y: 310 }, 270); // bottom inner
+
+    makeWall(this, { x: 5, y: 300 }, { x: 10, y: 400 }, 0);
+    makeWall(this, { x: 100, y: 300 }, { x: 10, y: 200 }, 0);
+
+    makeWall(this, { x: 200, y: 100 }, { x: 10, y: 410 }, 90);
+    makeWall(this, { x: 250, y: 200 }, { x: 10, y: 310 }, 90);
+
+    makeWall(this, { x: 610, y: 200 }, { x: 10, y: 210 }, 180);
+    makeWall(this, { x: 750, y: 300 }, { x: 10, y: 290 }, 90);
+
+    makeWall(this, { x: 750, y: 400 }, { x: 10, y: 510 }, 90);
+
+    makeWall(this, { x: 250, y: 495 }, { x: 10, y: 500 }, 270);
+
+    // walls that are conditionally in effect
+
+    this.c.entities.create(Wall, {
+      center: { x: 400, y: 150 }, size: { x: 10, y: 90 }, angle: 0, label: "tunnel"
     });
 
-    this.c.entities.create(Wall, { // top inner
-      center: { x: 500, y: 100 }, size: { x: 10, y: 800 }, angle: 90
+    this.c.entities.create(Wall, {
+      center: { x: 500, y: 150 }, size: { x: 10, y: 90 }, angle: 0, label: "tunnel"
     });
 
-    this.c.entities.create(Wall, { // right inner
-      center: { x: 900, y: 250 }, size: { x: 10, y: 300 }, angle: 180
+    this.c.entities.create(Wall, {
+      center: { x: 450, y: 100 }, size: { x: 10, y: 90 }, angle: 90, label: "bridge"
     });
 
-    this.c.entities.create(Wall, { // right outer
-      center: { x: 995, y: 250 }, size: { x: 10, y: 500 }, angle: 180
+    this.c.entities.create(Wall, {
+      center: { x: 450, y: 200 }, size: { x: 10, y: 90 }, angle: 90, label: "bridge"
     });
 
-    this.c.entities.create(Wall, { // bottom inner
-      center: { x: 500, y: 400 }, size: { x: 10, y: 800 }, angle: 270
-    });
+    // ridiculous bridge
 
-    this.c.entities.create(Wall, { // bottom outer
-      center: { x: 500, y: 495 }, size: { x: 10, y: 1000 }, angle: 270
-    });
-
-    this.c.entities.create(Wall, { // left outer
-      center: { x: 5, y: 250 }, size: { x: 10, y: 500 }, angle: 0
-    });
-
-    this.c.entities.create(Wall, { // left inner
-      center: { x: 100, y: 250 }, size: { x: 10, y: 300 }, angle: 0
-    });
+    this.c.entities.create(Bridge);
   };
 
   Game.prototype = {
     draw: function(ctx) {
-
-      ctx.font = "20px Courier";
-      ctx.fillStyle = this.car.color;
-      ctx.fillText(this.car.lapsLeft() + " laps left",
-                   this.size.x / 2,
-                   this.size.y / 2);
+      // ctx.font = "20px Courier";
+      // ctx.fillStyle = this.car.color;
+      // ctx.fillText(this.car.lapsToGo() + " laps left",
+      //              this.size.x / 2,
+      //              this.size.y / 2);
 
     }
+  };
+
+  function makeWall(game, center, size, angle) {
+    return game.c.entities.create(Wall, {
+      center: center, size: size, angle: angle, on: true
+    });
   };
 
   function Checkpoint(game, options) {
@@ -80,6 +109,7 @@
     this.center = options.center;
     this.size = options.size;
     this.angle = options.angle;
+    this.label = options.label || undefined;
     this.color = "#000";
   };
 
@@ -106,22 +136,13 @@
     collision: function(other) {
       if (other instanceof Car) {
         var car = other;
-        if (this.isHorizontal()) {
-          var latestPass = car.passes[car.passes.length - 1];
-          if (car.center.y > this.center.y &&
-              (latestPass === undefined ||
-               (latestPass.checkpoint === this && latestPass.passed === true))) {
-            console.log("push")
-            car.passes.push({ checkpoint: this, passed: false });
-          } else if (latestPass !== undefined &&
-                     car.center.y < this.center.y &&
-                     latestPass.checkpoint === this &&
-                     latestPass.passed === false) {
-            console.log("passed")
-            latestPass.passed = true;
-          }
-        } else {
-          throw "vertical checkpoints not supported";
+        var latestPass = car.passes[car.passes.length - 1];
+        if (latestPass !== this &&
+            car.center.y < this.center.y) {
+          car.passes.push(this);
+        } else if (latestPass === this &&
+                   car.center.y > this.center.y) {
+          car.passes.pop();
         }
       }
     }
@@ -132,6 +153,7 @@
     this.zindex = 0;
     this.center = options.center;
     this.size = options.size;
+    this.label = options.label || undefined;
 
     if (options.angle === undefined) {
       throw "need angle";
@@ -141,7 +163,9 @@
 
   Wall.prototype = {
     draw: function(ctx) {
-      util.fillRect(ctx, this, WALL_COLOR);
+      if (this.label === undefined) {
+        util.fillRect(ctx, this, WALL_COLOR);
+      }
     }
   };
 
@@ -195,7 +219,7 @@
 
   function BackWheel(game, options) {
     this.game = game;
-    this.zindex = 2;
+    this.zindex = 0;
     this.car = options.car;
     this.center = options.center;
     this.size = { x: 4, y: 8 };
@@ -209,6 +233,23 @@
 
     collision: function(other) {
       this.car.handleCollision(this, other);
+    }
+  };
+
+  function Bridge(game) {
+    this.game = game;
+    this.zindex = 3;
+  };
+
+  Bridge.prototype = {
+    draw: function(ctx) {
+      if (this.game.car.label() === "tunnel") {
+        util.fillRect(ctx, { center: { x: 450, y: 150 }, size: { x: 90, y: 90 } },
+                      BACKGROUND_COLOR);
+      }
+
+      util.fillRect(ctx, { center: { x: 400, y: 150 }, size: { x: 10, y: 90 } }, WALL_COLOR);
+      util.fillRect(ctx, { center: { x: 500, y: 150 }, size: { x: 10, y: 90 } }, WALL_COLOR);
     }
   };
 
@@ -290,8 +331,15 @@
       return [this.frontLeft, this.frontRight, this.backLeft, this.backRight];
     },
 
-    lapsLeft: function() {
-      return 3 - this.passes.filter(function(p) { return p.passed === true; }).length;
+    lapsToGo: function() {
+      return 3 - Math.floor((this.passes.length - 1) / 2);
+    },
+
+    label: function() {
+      var lastPass = this.passes[this.passes.length - 1];
+      if (lastPass !== undefined) {
+        return lastPass.label;
+      }
     },
 
     move: function() {
@@ -318,58 +366,59 @@
     handleCollision: function(carPiece, other) {
       if (other instanceof Wall) {
         var car = carPiece.car || carPiece;
+        if (other.label === undefined || car.label() !== other.label) {
+          var bounceRatio = 0.4;
+          var otherNormal = util.bounceLineNormal(car, other);
 
-        var bounceRatio = 0.4;
-        var otherNormal = util.bounceLineNormal(car, other);
+          // this.game.c.entities.create(Line, {
+          //   startPoint: util.cp(car.center),
+          //   endPoint: util.add(car.center, util.multiply(otherNormal, { x: 100, y: 100 })),
+          //   color: "#000"
+          // });
 
-        // this.game.c.entities.create(Line, {
-        //   startPoint: util.cp(car.center),
-        //   endPoint: util.add(car.center, util.multiply(otherNormal, { x: 100, y: 100 })),
-        //   color: "#000"
-        // });
+          // this.game.c.entities.create(Line, {
+          //   startPoint: util.cp(car.center),
+          //   endPoint: util.add(car.center, util.multiply(car.velocity, { x: 100, y: 100 })),
+          //   color: "#f00"
+          // });
 
-        // this.game.c.entities.create(Line, {
-        //   startPoint: util.cp(car.center),
-        //   endPoint: util.add(car.center, util.multiply(car.velocity, { x: 100, y: 100 })),
-        //   color: "#f00"
-        // });
+          function carInWall(car) {
+            return [car].concat(car.wheels())
+              .filter(function(p) {
+                return this.game.c.collider.isIntersecting(p, other)
+              }).length > 0
+          };
 
-        function carInWall(car) {
-          return [car].concat(car.wheels())
-            .filter(function(p) {
-              return this.game.c.collider.isIntersecting(p, other)
-            }).length > 0
-        };
+          // get out of wall
 
-        // get out of wall
-
-        var oldVelocity = this.velocity;
-        car.velocity = util.unitVector(otherNormal);
-        var i = 0;
-        while(carInWall(car)) {
-          i++;
-          car.move();
-          if (i > 100) {
-            break;
+          var oldVelocity = this.velocity;
+          car.velocity = util.unitVector(otherNormal);
+          var i = 0;
+          while(carInWall(car)) {
+            i++;
+            car.move();
+            if (i > 100) {
+              break;
+            }
           }
-        }
 
-        car.velocity = oldVelocity;
+          car.velocity = oldVelocity;
 
-        // bounce off wall
+          // bounce off wall
 
-        var dot = util.dotProduct(car.velocity, otherNormal);
-        car.velocity.x -= 2 * dot * otherNormal.x;
-        car.velocity.y -= 2 * dot * otherNormal.y;
+          var dot = util.dotProduct(car.velocity, otherNormal);
+          car.velocity.x -= 2 * dot * otherNormal.x;
+          car.velocity.y -= 2 * dot * otherNormal.y;
 
-        car.velocity = util.multiply(car.velocity, { x: bounceRatio, y: bounceRatio });
+          car.velocity = util.multiply(car.velocity, { x: bounceRatio, y: bounceRatio });
 
-        var i = 0;
-        while (carInWall(car)) {
-          i++;
-          car.move();
-          if (i > 100) {
-            break;
+          var i = 0;
+          while (carInWall(car)) {
+            i++;
+            car.move();
+            if (i > 100) {
+              break;
+            }
           }
         }
       }
