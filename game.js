@@ -95,7 +95,8 @@
         }
       } else if (this.state === "racing") {
         if (this.car.lapsToGo() === 0) {
-          var time = new Date().getTime() - this.started;
+          this.stopped = new Date().getTime();
+          var time = this.stopped - this.started;
           if (this.best === undefined || time < this.best) {
             this.best = time;
           }
@@ -115,6 +116,7 @@
       this.countdown = 2;
       this.state = "countingdown";
       this.started = new Date().getTime();
+      this.stopped = undefined;
 
       var self = this;
       this.c.entities.all(Car).forEach(function(c) {
@@ -160,10 +162,12 @@
       // this
 
       var thisTimeStr = "THIS ";
-      if (this.state === "racing") {
+      if (this.state === "countingdown") {
+        thisTimeStr += "0.000";
+      } else if (this.state === "racing") {
         thisTimeStr += formatTime(new Date().getTime() - this.started);
-      } else {
-        thisTimeStr += formatTime();
+      } else if (this.state === "raceover") {
+        thisTimeStr += formatTime(this.stopped - this.started);
       }
       ctx.fillText(thisTimeStr, 160, 307);
 
