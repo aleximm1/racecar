@@ -9,16 +9,10 @@
     this.size = { x: 1000, y: 500 };
     this.c = new Coquette(this, "screen", this.size.x, this.size.y, BACKGROUND_COLOR);
 
-    var start = { x: this.size.x * 0.95, y: this.size.y / 2 };
+    this.restart();
+    this.best = undefined;
 
     // cars
-
-    this.car = this.c.entities.create(Car, {
-      center: { x: start.x + 20, y: start.y },
-      keys: { left: this.c.inputter.LEFT_ARROW, right: this.c.inputter.RIGHT_ARROW,
-              forward: this.c.inputter.UP_ARROW, backward: this.c.inputter.DOWN_ARROW },
-      color: "#33f"
-    });
 
     // checkpoints
 
@@ -88,13 +82,94 @@
   };
 
   Game.prototype = {
-    draw: function(ctx) {
-      // ctx.font = "20px Courier";
-      // ctx.fillStyle = this.car.color;
-      // ctx.fillText(this.car.lapsToGo() + " laps left",
-      //              this.size.x / 2,
-      //              this.size.y / 2);
+    update: function() {
+      if (this.state === "countingdown") {
+        if (this.lastCountdownDecrement + 1000 < new Date().getTime()) {
+          this.countdown--;
+          this.lastCountdownDecrement = new Date().getTime();
+          if (this.countdown === 0) {
+            this.countdown = "GO"
+            this.state = "racing";
+            this.started = new Date().getTime();
+          }
+        }
+      } else if (this.state === "racing") {
+        if (this.car.lapsToGo() === 3) {
+          var time = new Date().getTime() - this.started;
+          if (this.best === undefined || time < this.best) {
+            this.best = time;
+          }
 
+          this.countdown = undefined;
+          this.state = "raceover";
+        }
+      }
+
+      if (this.c.inputter.isPressed(this.c.inputter.R)) {
+        this.restart();
+      }
+    },
+
+    restart: function() {
+      this.lastCountdownDecrement = new Date().getTime();
+      this.countdown = 2;
+      this.state = "countingdown";
+      this.started = new Date().getTime();
+
+      var self = this;
+      this.c.entities.all(Car).forEach(function(c) {
+        self.c.entities.destroy(c);
+        c.wheels().forEach(function(w) { self.c.entities.destroy(w); });
+      });
+
+      this.car = this.c.entities.create(Car, {
+        center: { x: this.size.x * 0.95, y: this.size.y / 2 },
+        keys: { left: this.c.inputter.LEFT_ARROW, right: this.c.inputter.RIGHT_ARROW,
+                forward: this.c.inputter.UP_ARROW, backward: this.c.inputter.DOWN_ARROW },
+        color: "#33f"
+      });
+    },
+
+    draw: function(ctx) {
+      if (this.state === "raceover") {
+        ctx.fillStyle = "#ff0";
+        ctx.fillRect(105, 200, 290, 200);
+      }
+
+      if (this.state !== "raceover") {
+        var color;
+        if (this.countdown === 2) {
+          color = "#f00";
+        } else if (this.countdown === 1) {
+          color = "#fc0";
+        } else {
+          color = "#0f0";
+        }
+        ctx.fillStyle = color;
+        ctx.fillRect(610, 100, 285, 200);
+      }
+
+
+      ctx.font = "20px Courier";
+      ctx.fillStyle = TEXT_COLOR;
+
+      // best
+
+      ctx.fillText("BEST " + formatTime(this.best),
+                   160, 277);
+
+      // this
+
+      var thisTimeStr = "THIS ";
+      if (this.state === "racing") {
+        thisTimeStr += formatTime(new Date().getTime() - this.started);
+      } else {
+        thisTimeStr += formatTime();
+      }
+      ctx.fillText(thisTimeStr, 160, 307);
+
+      ctx.fillText("LAPS " + this.car.lapsToGo(),
+                   160, 337);
     }
   };
 
@@ -182,6 +257,8 @@
   FrontWheel.prototype = {
     turnRate: 0,
     update: function(delta) {
+      if (this.game.state === "countingdown") { return; }
+
       var TURN_ACCRETION = 0.007 * delta;
       var MAX_WHEEL_ANGLE = 30;
       var WHEEL_RECENTER_RATE = 2;
@@ -219,7 +296,7 @@
 
   function BackWheel(game, options) {
     this.game = game;
-    this.zindex = 0;
+    this.zindex = 2;
     this.car = options.car;
     this.center = options.center;
     this.size = { x: 4, y: 8 };
@@ -289,6 +366,8 @@
 
   Car.prototype = {
     update: function(delta) {
+      if (this.game.state === "countingdown") { return; }
+
       var ACCELERATION_ACCRETION = 0.002 * delta;
       var MAX_SPEED = 5;
 
@@ -356,7 +435,7 @@
         }, this);
       }
 
-      util.fillRect(ctx, this, this.color);
+      util.fillRect(ctx, this, "#000");
     },
 
     collision: function(other) {
@@ -609,6 +688,14 @@
       ctx.closePath();
       ctx.fillStyle = color;
       ctx.fill();
+    }
+  };
+
+  function formatTime(millis) {
+    if (millis !== undefined) {
+      return (millis / 1000).toString();
+    } else {
+      return "---";
     }
   };
 
