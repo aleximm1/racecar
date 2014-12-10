@@ -1,4 +1,4 @@
-# LD31
+# Racecar
 
 Entry for Ludum Dare #31 (December 2014).
 
