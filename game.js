@@ -1,111 +1,102 @@
 ;(function(exports) {
-  var TRACK_COLOR = "#fff";
+  // Written for Ludum Dare #31 (December 2014)
+
   var WALL_COLOR = "#000";
   var WHEEL_COLOR = "#000";
   var BACKGROUND_COLOR = "#fff";
   var TEXT_COLOR = "#000";
+  var COUNTDOWN_COLORS = ["#0f0", "#fc0", "#f00"];
 
   function Game() {
     this.size = { x: 1000, y: 500 };
     this.c = new Coquette(this, "screen", this.size.x, this.size.y, BACKGROUND_COLOR);
 
-    this.restart();
+    this.state = "init";
+    this.states = {
+      "init": ["countingDown"],
+      "countingDown": ["racing"],
+      "racing": ["raceOver", "countingDown"],
+      "raceOver": ["countingDown"]
+    };
+
     this.best = undefined;
+    this.restart();
 
-    // cars
-
-    // checkpoints
-
-    this.c.entities.create(Checkpoint, {
-      center: { x: 950, y: 240 },
-      size: { x: 10, y: 100 },
-      angle: 90,
-      label: "bridge"
-    });
-
-    this.c.entities.create(Checkpoint, {
-      center: { x: 55, y: 300 },
-      size: { x: 10, y: 100 },
-      angle: 90,
-      label: "tunnel"
-    });
-
-    // walls
-
-    makeWall(this, { x: 900, y: 200 }, { x: 10, y: 210 }, 180); // right inner
-    makeWall(this, { x: 995, y: 200 }, { x: 10, y: 400 }, 180); // right outer
-
-    makeWall(this, { x: 700, y: 5 }, { x: 10, y: 600 }, 90); // top outer
-    makeWall(this, { x: 700, y: 100 }, { x: 10, y: 410 }, 90) // top inner
-
-    makeWall(this, { x: 400, y: 50 }, { x: 10, y: 100 }, 0); // third straight top
-
-    makeWall(this, { x: 400, y: 300 }, { x: 10, y: 200 }, 0); // third straight left
-    makeWall(this, { x: 500, y: 350 }, { x: 10, y: 310 }, 0); // third straight right
-
-    makeWall(this, { x: 250, y: 400 }, { x: 10, y: 310 }, 270); // bottom inner
-
-    makeWall(this, { x: 5, y: 300 }, { x: 10, y: 400 }, 0);
-    makeWall(this, { x: 100, y: 300 }, { x: 10, y: 200 }, 0);
-
-    makeWall(this, { x: 200, y: 100 }, { x: 10, y: 410 }, 90);
-    makeWall(this, { x: 250, y: 200 }, { x: 10, y: 310 }, 90);
-
-    makeWall(this, { x: 610, y: 200 }, { x: 10, y: 210 }, 180);
-    makeWall(this, { x: 750, y: 300 }, { x: 10, y: 290 }, 90);
-
-    makeWall(this, { x: 750, y: 400 }, { x: 10, y: 510 }, 90);
-
-    makeWall(this, { x: 250, y: 495 }, { x: 10, y: 500 }, 270);
-
-    // walls that are conditionally in effect
-
-    this.c.entities.create(Wall, {
-      center: { x: 400, y: 150 }, size: { x: 10, y: 90 }, angle: 0, label: "tunnel"
-    });
-
-    this.c.entities.create(Wall, {
-      center: { x: 500, y: 150 }, size: { x: 10, y: 90 }, angle: 0, label: "tunnel"
-    });
-
-    this.c.entities.create(Wall, {
-      center: { x: 450, y: 100 }, size: { x: 10, y: 90 }, angle: 90, label: "bridge"
-    });
-
-    this.c.entities.create(Wall, {
-      center: { x: 450, y: 200 }, size: { x: 10, y: 90 }, angle: 90, label: "bridge"
-    });
-
-    // ridiculous bridge
-
-    this.c.entities.create(Bridge);
+    makeEntities(this.c, Checkpoint, CHECKPOINTS);
+    makeEntities(this.c, Wall, WALLS);
+    this.c.entities.create(BridgeSurface); // ridiculous bridge
   };
 
   Game.prototype = {
     update: function() {
-      if (this.state === "countingdown") {
-        if (this.lastCountdownDecrement + 1000 < new Date().getTime()) {
-          this.countdown--;
-          this.lastCountdownDecrement = new Date().getTime();
-          if (this.countdown === 0) {
-            this.countdown = "GO"
-            this.state = "racing";
-            this.started = new Date().getTime();
-          }
-        }
+      if (this.state === "countingDown") {
+        this.countingDown();
       } else if (this.state === "racing") {
-        if (this.car.lapsToGo() === 0) {
-          this.stopped = new Date().getTime();
-          var time = this.stopped - this.started;
-          if (this.best === undefined || time < this.best) {
-            this.best = time;
-          }
+        this.racing();
+      } else if (this.state === "raceOver") {
+        this.raceOver();
+      }
+    },
 
-          this.countdown = undefined;
-          this.state = "raceover";
-        }
+    draw: function(ctx) {
+      if (this.state === "raceOver") {
+        ctx.fillStyle = "#ff0";
+        ctx.fillRect(105, 200, 290, 200);
+
+        ctx.fillStyle = COUNTDOWN_COLORS[2];
+        ctx.fillRect(610, 100, 285, 200);
+      } else {
+        ctx.fillStyle = COUNTDOWN_COLORS[this.countdown];
+        ctx.fillRect(610, 100, 285, 200);
       }
 
+      ctx.font = "20px Courier";
+      ctx.fillStyle = TEXT_COLOR;
+
+      ctx.fillText("BEST " + (this.best === undefined ? "" : formatTime(this.best)), 160, 277);
+      ctx.fillText("THIS " + formatTime(this.thisTime), 160, 307);
+      ctx.fillText("LAPS " + this.car.lapsToGo(), 160, 337);
+    },
+
+    transition: function(nextState) {
+      if (this.states[this.state].indexOf(nextState) !== -1) {
+        this.state = nextState;
+      } else {
+        throw "Tried to transition from " + this.state + " to " + nextState;
+      }
+    },
+
+    countingDown: function() {
+      this.thisTime = 0;
+      if (this.lastCountdownDecrement + 1000 < new Date().getTime()) {
+        this.countdown--;
+        this.lastCountdownDecrement = new Date().getTime();
+        if (this.countdown === 0) {
+          this.transition("racing");
+          this.started = new Date().getTime();
+        }
+      }
+    },
+
+    racing: function() {
+      this.thisTime = new Date().getTime() - this.started;
+      if (this.car.lapsToGo() === 0) {
+        this.stopped = new Date().getTime();
+        var time = this.stopped - this.started;
+        if (this.best === undefined || time < this.best) {
+          this.best = time;
+        }
+
+        this.transition("raceOver");
+      }
+
+      if (this.c.inputter.isPressed(this.c.inputter.R)) {
+        this.restart();
+      }
+    },
+
+    raceOver: function() {
+      this.thisTime = this.stopped - this.started;
       if (this.c.inputter.isPressed(this.c.inputter.R)) {
         this.restart();
       }
@@ -114,71 +105,18 @@
     restart: function() {
       this.lastCountdownDecrement = new Date().getTime();
       this.countdown = 2;
-      this.state = "countingdown";
+      this.transition("countingDown");
       this.started = new Date().getTime();
       this.stopped = undefined;
 
-      var self = this;
-      this.c.entities.all(Car).forEach(function(c) {
-        self.c.entities.destroy(c);
-        c.wheels().forEach(function(w) { self.c.entities.destroy(w); });
-      });
+      if (this.car !== undefined) {
+        this.car.destroy();
+      }
 
       this.car = this.c.entities.create(Car, {
-        center: { x: this.size.x * 0.95, y: this.size.y / 2 - 15 },
-        keys: { left: this.c.inputter.LEFT_ARROW, right: this.c.inputter.RIGHT_ARROW,
-                forward: this.c.inputter.UP_ARROW, backward: this.c.inputter.DOWN_ARROW },
-        color: "#33f"
+        center: { x: this.size.x * 0.95, y: this.size.y / 2 - 15 }
       });
-    },
-
-    draw: function(ctx) {
-      if (this.state === "raceover") {
-        ctx.fillStyle = "#ff0";
-        ctx.fillRect(105, 200, 290, 200);
-      }
-
-      if (this.state !== "raceover") {
-        var color;
-        if (this.countdown === 2) {
-          color = "#f00";
-        } else if (this.countdown === 1) {
-          color = "#fc0";
-        } else {
-          color = "#0f0";
-        }
-        ctx.fillStyle = color;
-        ctx.fillRect(610, 100, 285, 200);
-      }
-
-
-      ctx.font = "20px Courier";
-      ctx.fillStyle = TEXT_COLOR;
-
-      // best
-
-      ctx.fillText("BEST " + formatTime(this.best), 160, 277);
-
-      // this
-
-      var thisTimeStr = "THIS ";
-      if (this.state === "countingdown") {
-        thisTimeStr += "0.000";
-      } else if (this.state === "racing") {
-        thisTimeStr += formatTime(new Date().getTime() - this.started);
-      } else if (this.state === "raceover") {
-        thisTimeStr += formatTime(this.stopped - this.started);
-      }
-      ctx.fillText(thisTimeStr, 160, 307);
-
-      ctx.fillText("LAPS " + this.car.lapsToGo(), 160, 337);
     }
-  };
-
-  function makeWall(game, center, size, angle) {
-    return game.c.entities.create(Wall, {
-      center: center, size: size, angle: angle, on: true
-    });
   };
 
   function Checkpoint(game, options) {
@@ -191,10 +129,6 @@
   };
 
   Checkpoint.prototype = {
-    update: function() {
-
-    },
-
     draw: function(ctx) {
       if (this.label === "bridge") {
         ctx.restore(); // doing own rotation of drawing so stop framework doing it
@@ -232,17 +166,14 @@
     this.zindex = 0;
     this.center = options.center;
     this.size = options.size;
-    this.label = options.label || undefined;
-
-    if (options.angle === undefined) {
-      throw "need angle";
-    }
+    this.label = options.label;
+    this.invisible = options.invisible === true || false;
     this.angle = options.angle;
   };
 
   Wall.prototype = {
     draw: function(ctx) {
-      if (this.label === undefined) {
+      if (!this.invisible) {
         util.fillRect(ctx, this, WALL_COLOR);
       }
     }
@@ -261,15 +192,15 @@
   FrontWheel.prototype = {
     turnRate: 0,
     update: function(delta) {
-      if (this.game.state === "countingdown") { return; }
+      if (this.game.state === "countingDown") { return; }
 
       var TURN_ACCRETION = 0.007 * delta;
       var MAX_WHEEL_ANGLE = 30;
       var WHEEL_RECENTER_RATE = 2;
 
-      if (this.game.c.inputter.isDown(this.car.keys.left)) {
+      if (this.game.c.inputter.isDown(this.game.c.inputter.LEFT_ARROW)) {
         this.turnRate -= TURN_ACCRETION
-      } else if (this.game.c.inputter.isDown(this.car.keys.right)) {
+      } else if (this.game.c.inputter.isDown(this.game.c.inputter.RIGHT_ARROW)) {
         this.turnRate += TURN_ACCRETION;
       } else {
         this.turnRate = 0;
@@ -317,12 +248,12 @@
     }
   };
 
-  function Bridge(game) {
+  function BridgeSurface(game) {
     this.game = game;
     this.zindex = 3;
   };
 
-  Bridge.prototype = {
+  BridgeSurface.prototype = {
     draw: function(ctx) {
       if (this.game.car.label() === "tunnel") {
         util.fillRect(ctx, { center: { x: 450, y: 150 }, size: { x: 90, y: 90 } },
@@ -338,14 +269,11 @@
     this.game = game;
     this.zindex = 1;
     this.center = options.center;
-    this.keys = options.keys;
     this.color = options.color;
     this.size = { x: 10, y: 24 };
     this.angle = 0;
     this.velocity = { x: 0, y: 0 };
     this.passes = [];
-
-    this.drawables = [];
 
     this.frontLeft = this.game.c.entities.create(FrontWheel, {
       center: { x: this.center.x - this.size.x / 2, y: this.center.y - this.size.y / 2.5 },
@@ -370,7 +298,7 @@
 
   Car.prototype = {
     update: function(delta) {
-      if (this.game.state === "countingdown") { return; }
+      if (this.game.state === "countingDown") { return; }
 
       var ACCELERATION_ACCRETION = 0.002 * delta;
       var MAX_SPEED = 5;
@@ -394,11 +322,11 @@
       }
 
       var ratio = MAX_SPEED - util.magnitude(this.velocity);
-      if (this.game.c.inputter.isDown(this.keys.forward)) {
+      if (this.game.c.inputter.isDown(this.game.c.inputter.UP_ARROW)) {
         var headingVector = util.angleToVector(this.angle);
         this.velocity.x += headingVector.x * ACCELERATION_ACCRETION * ratio;
         this.velocity.y += headingVector.y * ACCELERATION_ACCRETION * ratio;
-      } else if (this.game.c.inputter.isDown(this.keys.backward)) {
+      } else if (this.game.c.inputter.isDown(this.game.c.inputter.DOWN_ARROW)) {
         var headingVector = util.angleToVector(this.angle + 180);
         this.velocity.x += headingVector.x * ACCELERATION_ACCRETION * ratio;
         this.velocity.y += headingVector.y * ACCELERATION_ACCRETION * ratio;
@@ -433,12 +361,6 @@
     },
 
     draw: function(ctx) {
-      if (this.drawables !== undefined) {
-        this.drawables.forEach(function(d) {
-          util.fillRect(this.game.c.renderer.getCtx(), d, CAR_COLOR);
-        }, this);
-      }
-
       util.fillRect(ctx, this, "#000");
     },
 
@@ -452,18 +374,6 @@
         if (other.label === undefined || car.label() !== other.label) {
           var bounceRatio = 0.4;
           var otherNormal = util.bounceLineNormal(car, other);
-
-          // this.game.c.entities.create(Line, {
-          //   startPoint: util.cp(car.center),
-          //   endPoint: util.add(car.center, util.multiply(otherNormal, { x: 100, y: 100 })),
-          //   color: "#000"
-          // });
-
-          // this.game.c.entities.create(Line, {
-          //   startPoint: util.cp(car.center),
-          //   endPoint: util.add(car.center, util.multiply(car.velocity, { x: 100, y: 100 })),
-          //   color: "#f00"
-          // });
 
           function carInWall(car) {
             return [car].concat(car.wheels())
@@ -505,47 +415,18 @@
           }
         }
       }
-    }
-  };
+    },
 
-  function Line(game, options) {
-    this.startPoint = options.startPoint;
-    this.endPoint = options.endPoint;
-    this.color = options.color
-  };
-
-  Line.prototype = {
-    draw: function(ctx) {
-      ctx.strokeStyle = this.color;
-      ctx.beginPath();
-      ctx.moveTo(this.startPoint.x, this.startPoint.y);
-      ctx.lineTo(this.endPoint.x, this.endPoint.y);
-      ctx.stroke();
-      ctx.closePath();
-    }
-  };
-
-  function Rectangle(game, options) {
-    this.game = game;
-    this.zindex = 10;
-    this.center = options.center;
-    this.size = options.size;
-    this.color = options.color
-  };
-
-  Rectangle.prototype = {
-    draw: function(ctx) {
-      util.fillRect(ctx, this, this.color);
+    destroy: function() {
+      var c = this.game.c;
+      c.entities.destroy(this);
+      this.wheels().forEach(function(w) { c.entities.destroy(w); });
     }
   };
 
   var util = {
     RADIANS_TO_DEGREES: 0.01745,
     DEGREES_TO_RADIANS: 57.30659026,
-
-    cp: function(p) {
-      return { x: p.x, y: p.y };
-    },
 
     angleToVector: function(angle) {
       var r = angle * 0.01745;
@@ -585,12 +466,6 @@
       };
     },
 
-    rotateVectorTo: function(v, angle) {
-      var magnitude = this.magnitude(v);
-      var v = this.angleToVector(angle);
-      return { x: v.x * magnitude, y: v.y * magnitude };
-    },
-
     dotProduct: function(vector1, vector2) {
       return vector1.x * vector2.x + vector1.y * vector2.y;
     },
@@ -607,26 +482,12 @@
       };
     },
 
-    leftNormal: function(vector) {
-      return {
-        x: -vector.y,
-        y: vector.x
-      };
-    },
-
     bounceLineNormal: function(obj, line) {
       var objToClosestPointOnLineVector =
           util.vectorBetween(
             util.pointOnLineClosestToObj(obj, line),
             obj.center);
 
-      // game.c.entities.create(Rectangle, {
-      //   center: util.pointOnLineClosestToObj(obj, line),
-      //   size: { x: 5, y: 5 },
-      //   color: "#000"
-      // });
-
-      // Make the normal a unit vector and return it.
       return util.unitVector(objToClosestPointOnLineVector);
     },
 
@@ -634,18 +495,6 @@
       var endPoints = util.objToLinePoints(line);
       var lineEndPoint1 = endPoints[0]
       var lineEndPoint2 = endPoints[1];
-
-      // game.c.entities.create(Rectangle, {
-      //   center: lineEndPoint1,
-      //   size: { x: 5, y: 5 },
-      //   color: "#f00"
-      // });
-
-      // game.c.entities.create(Rectangle, {
-      //   center: lineEndPoint2,
-      //   size: { x: 5, y: 5 },
-      //   color: "#f00"
-      // });
 
       var lineUnitVector = util.unitVector(util.angleToVector(line.angle));
       var lineEndToObjVector = util.vectorBetween(lineEndPoint1, obj.center);
@@ -684,24 +533,55 @@
                    obj.center.y - obj.size.y / 2,
                    obj.size.x,
                    obj.size.y);
-    },
-
-    fillCircle: function(ctx, obj, color) {
-      ctx.beginPath();
-      ctx.arc(obj.center.x, obj.center.y, obj.size.x / 2, 0, Math.PI * 2, true);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
     }
   };
 
   function formatTime(millis) {
     if (millis !== undefined) {
-      return (millis / 1000).toString();
+      return (millis / 1000).toFixed(3);
     } else {
       return "";
     }
   };
+
+  function makeEntities(c, Constructor, optionsArray) {
+    for (var i = 0; i < optionsArray.length; i++) {
+      c.entities.create(Constructor, optionsArray[i]);
+    }
+  };
+
+  var CHECKPOINTS = [
+    { center: { x: 950, y: 240 }, size: { x: 10, y: 100 }, angle: 90, label: "bridge" },
+    { center: { x: 55, y: 300 }, size: { x: 10, y: 100 }, angle: 90, label: "tunnel" }
+  ];
+
+  var WALLS = [
+    { center: { x: 900, y: 200 }, size: { x: 10, y: 210 }, angle: 180 },
+    { center: { x: 995, y: 200 }, size: { x: 10, y: 400 }, angle: 180 },
+    { center: { x: 700, y: 5 },   size: { x: 10, y: 600 }, angle: 90 },
+    { center: { x: 700, y: 100 }, size: { x: 10, y: 410 }, angle: 90 },
+    { center: { x: 400, y: 50 },  size: { x: 10, y: 100 }, angle: 0 },
+    { center: { x: 400, y: 300 }, size: { x: 10, y: 200 }, angle: 0 },
+    { center: { x: 500, y: 350 }, size: { x: 10, y: 310 }, angle: 0 },
+    { center: { x: 250, y: 400 }, size: { x: 10, y: 310 }, angle: 270 },
+    { center: { x: 5, y: 300 },   size: { x: 10, y: 400 }, angle: 0 },
+    { center: { x: 100, y: 300 }, size: { x: 10, y: 200 }, angle: 0 },
+    { center: { x: 200, y: 100 }, size: { x: 10, y: 410 }, angle: 90 },
+    { center: { x: 250, y: 200 }, size: { x: 10, y: 310 }, angle: 90 },
+    { center: { x: 610, y: 200 }, size: { x: 10, y: 210 }, angle: 180 },
+    { center: { x: 750, y: 300 }, size: { x: 10, y: 290 }, angle: 90 },
+    { center: { x: 750, y: 400 }, size: { x: 10, y: 510 }, angle: 90 },
+    { center: { x: 250, y: 495 }, size: { x: 10, y: 500 }, angle: 270 },
+
+    { center: { x: 400, y: 150 }, size: { x: 10, y: 90 }, angle: 0, label: "tunnel",
+      invisible: true },
+    { center: { x: 500, y: 150 }, size: { x: 10, y: 90 }, angle: 0, label: "tunnel",
+      invisible: true },
+    { center: { x: 450, y: 100 }, size: { x: 10, y: 90 }, angle: 90, label: "bridge",
+      invisible: true },
+    { center: { x: 450, y: 200 }, size: { x: 10, y: 90 }, angle: 90, label: "bridge",
+      invisible: true }
+  ];
 
   exports.Game = Game;
 })(this);
