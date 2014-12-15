@@ -298,6 +298,10 @@
     });
   };
 
+  function angleDiff(a, b) {
+    return Math.atan2(Math.sin(a - b), Math.cos(a - b)) * util.DEGREES_TO_RADIANS;
+  };
+
   Car.prototype = {
     update: function(delta) {
       if (this.game.state === "countingDown") { return; }
@@ -310,11 +314,19 @@
         var turnCircumference = 2 * Math.PI * turnRadius;
         var rotateProportion = util.magnitude(this.velocity) / turnCircumference;
 
-        var velocityAngle = util.vectorToAngle(this.velocity);
-        var orientationAngle = util.vectorToAngle(util.angleToVector(this.angle));
+        var dir;
+        if (this.game.c.inputter.isDown(this.game.c.inputter.UP_ARROW)) {
+          dir = 1;
+        } else if (this.game.c.inputter.isDown(this.game.c.inputter.DOWN_ARROW)) {
+          dir = -1;
+        } else {
+          var velocityAngle = util.vectorToAngle(this.velocity);
+          var orientationAngle = util.vectorToAngle(util.angleToVector(this.angle));
+          var reversing = Math.abs(angleDiff(velocityAngle, orientationAngle)) > 90;
+          dir = reversing ? -1 : 1;
+        }
 
-        var rotateAngleDelta = rotateProportion * 360 *
-            (Math.min(velocityAngle - orientationAngle, orientationAngle - velocityAngle) < 90 ? 1 : -1);
+        var rotateAngleDelta = rotateProportion * 360 * dir;
         this.velocity = util.rotate(this.velocity, { x: 0, y: 0 }, rotateAngleDelta);
 
         this.wheels().concat(this).forEach(function(o) { o.angle += rotateAngleDelta; });
