@@ -210,7 +210,9 @@
           this.turnRate > 0 && this.wheelAngle < MAX_WHEEL_ANGLE) {
         this.wheelAngle += this.turnRate;
       } else if (this.turnRate === 0) {
-        if (this.wheelAngle > 0) {
+        if (Math.abs(this.wheelAngle) < 0.5) {
+          this.wheelAngle = 0;
+        } else if (this.wheelAngle > 0) {
           this.wheelAngle -= WHEEL_RECENTER_RATE;
         } else if (this.wheelAngle < 0) {
           this.wheelAngle += WHEEL_RECENTER_RATE;
